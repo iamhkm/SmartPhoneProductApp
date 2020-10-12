@@ -18,11 +18,10 @@ public class UsingCallableAndFuture {
 		}
 
 	};
-
+	
 	public static void main(String args[]) {
 		ExecutorService executorService = Executors.newSingleThreadExecutor();
 		Future<String> future = executorService.submit(callable);
-
 		while (!future.isDone()) {
 			System.out.println("Task is still not done...");
 			try {

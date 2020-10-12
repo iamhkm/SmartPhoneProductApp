@@ -9,31 +9,40 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-class CheckNumberOfProductsInTable implements Runnable {
+class CheckNumberOfProductsInTable {
+	private static int i = 0;
 
 	public static void main(String args[]) {
-		ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
-		Runnable task = new CheckNumberOfProductsInTable();
-		System.out.println("scheduling task to be executed every 2 seconds with an initial delay of 0 seconds");
-		scheduledExecutorService.scheduleAtFixedRate(task, 0, 2, TimeUnit.SECONDS);
-		try {
-			Thread.sleep(10000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		scheduledExecutorService.shutdown();
-	}
 
-	@Override
-	public void run() {
-		try (Connection con = dbconnection.connection();
-				PreparedStatement ps = con.prepareStatement("select count(*) from products");
-				ResultSet rs = ps.executeQuery();) {
-			rs.next();
-			int count = rs.getInt(1);
-			System.out.println(count);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+		ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
+		scheduledExecutorService.scheduleAtFixedRate(() -> {
+			try (Connection con = dbconnection.connection();
+					PreparedStatement ps = con.prepareStatement("select count(*) from products");
+					ResultSet rs = ps.executeQuery();) {
+				rs.next();
+				int count = rs.getInt(1);
+				System.out.println(count);
+				i++;
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}, 0, 2, TimeUnit.SECONDS);
+		/*
+		 * try { Thread.sleep(10000); } catch (InterruptedException e) {
+		 * e.printStackTrace(); } scheduledExecutorService.shutdown();
+		 */
+
+		scheduledExecutorService.scheduleAtFixedRate(() -> {
+			System.out.println("count=" + i);
+			if (i >= 30) {
+				System.exit(0);
+			}
+		}, 10, 10, TimeUnit.SECONDS);
+
+		Runtime r = Runtime.getRuntime();
+		r.addShutdownHook(new Thread(() -> {
+			System.out.println("shutdown executed");
+			scheduledExecutorService.shutdown();
+		}));
 	}
 }
