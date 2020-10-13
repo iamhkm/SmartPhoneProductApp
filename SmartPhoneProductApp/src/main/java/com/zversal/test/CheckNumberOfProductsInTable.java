@@ -1,48 +1,31 @@
 package com.zversal.test;
 
-import static com.zversal.application.MainApp.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 class CheckNumberOfProductsInTable {
-	private static int i = 0;
-
 	public static void main(String args[]) {
+		final Runtime r = Runtime.getRuntime();
+		final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
+		scheduledExecutorService.scheduleAtFixedRate(new DatabaseRowCountTest(), 2, 2, TimeUnit.SECONDS);
+		NumberOfDatabaseHits hitRunnable = new NumberOfDatabaseHits();
+		Thread t = new Thread(hitRunnable);
+		t.start();
 
-		ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
-		scheduledExecutorService.scheduleAtFixedRate(() -> {
-			try (Connection con = dbconnection.connection();
-					PreparedStatement ps = con.prepareStatement("select count(*) from products");
-					ResultSet rs = ps.executeQuery();) {
-				rs.next();
-				int count = rs.getInt(1);
-				System.out.println(count);
-				i++;
-			} catch (SQLException e) {
-				e.printStackTrace();
+		// NumberOfDatabaseHits hitRunnable2 = new NumberOfDatabaseHits();
+		// Thread t2 = new Thread(hitRunnable2);
+		// t2.start();
+
+		r.addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				scheduledExecutorService.shutdown();
+				System.out.println("executor shut down");
+				// NumberOfDatabaseHits.ConditionForGracefullKill = false;
+				System.out.println("thread killed gracefully");
+				System.out.println("shut down hook task completed..");
 			}
-		}, 0, 2, TimeUnit.SECONDS);
-		/*
-		 * try { Thread.sleep(10000); } catch (InterruptedException e) {
-		 * e.printStackTrace(); } scheduledExecutorService.shutdown();
-		 */
-
-		scheduledExecutorService.scheduleAtFixedRate(() -> {
-			System.out.println("count=" + i);
-			if (i >= 30) {
-				System.exit(0);
-			}
-		}, 10, 10, TimeUnit.SECONDS);
-
-		Runtime r = Runtime.getRuntime();
-		r.addShutdownHook(new Thread(() -> {
-			System.out.println("shutdown executed");
-			scheduledExecutorService.shutdown();
-		}));
+		});
 	}
 }
